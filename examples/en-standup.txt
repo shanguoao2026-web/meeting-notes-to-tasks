@@ -1,0 +1,11 @@
+Weekly product sync
+Facilitator: Alice
+
+Alice: Let's capture owners before we drop.
+ACTION: Bob to send the Q3 report by Friday.
+Alice: The design review went well. No follow-up there.
+Carol will update the roadmap by next Monday.
+Please ask Dana to book the customer call in 3 days.
+Bob: I'll draft the release notes by end of week.
+Eve should review the pull request.
+We talked about lunch and the weather.

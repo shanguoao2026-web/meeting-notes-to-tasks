@@ -1,0 +1,48 @@
+{
+  "name": "meeting-notes-to-tasks",
+  "version": "0.1.0",
+  "description": "Parse meeting transcripts into action items with owners and due dates.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "meeting-notes-to-tasks": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
+    "prepare": "npm run build",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/test/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "meeting",
+    "notes",
+    "tasks",
+    "action-items",
+    "transcript",
+    "vtt",
+    "srt",
+    "cli"
+  ],
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
