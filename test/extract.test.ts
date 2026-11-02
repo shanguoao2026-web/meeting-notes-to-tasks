@@ -196,6 +196,58 @@ test('CRLF SubRip input parses the same way', async () => {
   assert.equal(result.tasks[0]?.text, 'Send the file');
 });
 
+test('leading due prepositions are removed with the date', async () => {
+  const vtt = [
+    'WEBVTT',
+    '',
+    '00:00:01.000 --> 00:00:04.000',
+    "Alice: I'll schedule the client demo for next Monday.",
+    '',
+  ].join('\n');
+  const scheduled = await parseMeetingText(vtt, 'demo.vtt', options);
+  assert.equal(scheduled.tasks.length, 1);
+  assert.equal(scheduled.tasks[0]?.owner, 'Alice');
+  assert.equal(scheduled.tasks[0]?.text, 'Schedule the client demo');
+  assert.equal(scheduled.tasks[0]?.due, '2026-11-09');
+
+  const byFriday = await parseMeetingText('Mina: I will send the file by Friday.\n', 'notes.txt', options);
+  assert.equal(byFriday.tasks[0]?.text, 'Send the file');
+  assert.equal(byFriday.tasks[0]?.due, '2026-11-06');
+
+  const onNovember = await parseMeetingText('Please send the deck on November 7\n', 'notes.txt', options);
+  assert.equal(onNovember.tasks[0]?.text, 'Send the deck');
+  assert.equal(onNovember.tasks[0]?.due, '2026-11-07');
+
+  const lookFor = await parseMeetingText("Nina: I'll look for the report by Friday.\n", 'notes.txt', options);
+  assert.equal(lookFor.tasks[0]?.text, 'Look for the report');
+  assert.equal(lookFor.tasks[0]?.due, '2026-11-06');
+
+  const noLater = await parseMeetingText(
+    "I'll file the invoice no later than next Monday.\n",
+    'notes.txt',
+    options,
+  );
+  assert.equal(noLater.tasks[0]?.text, 'File the invoice');
+  assert.equal(noLater.tasks[0]?.due, '2026-11-09');
+
+  const until = await parseMeetingText("I'll send the recap until Friday.\n", 'notes.txt', options);
+  assert.equal(until.tasks[0]?.text, 'Send the recap');
+  assert.equal(until.tasks[0]?.due, '2026-11-06');
+
+  const comma = await parseMeetingText("I'll schedule the client demo for, next Monday.\n", 'notes.txt', options);
+  assert.equal(comma.tasks[0]?.text, 'Schedule the client demo');
+  assert.equal(comma.tasks[0]?.due, '2026-11-09');
+
+  const responsible = await parseMeetingText(
+    'Bob is responsible for the Friday review.\n',
+    'notes.txt',
+    options,
+  );
+  assert.equal(responsible.tasks[0]?.owner, 'Bob');
+  assert.equal(responsible.tasks[0]?.text, 'The review');
+  assert.equal(responsible.tasks[0]?.due, '2026-11-06');
+});
+
 test('default owner fills explicit actions that name nobody', async () => {
   const content = 'ACTION: send the recap by tomorrow.\n';
   const withOwner = await parseMeetingText(content, 'notes.txt', { ...options, defaultOwner: 'Alice' });

@@ -1,11 +1,26 @@
 import { InputError } from './errors.js';
 
-/** A due phrase found inside a sentence. `end` is exclusive. */
+/**
+ * A due phrase found inside a sentence. `end` is exclusive.
+ * `start` includes an English connector sitting immediately before the date
+ * (`for next Monday`, `by Friday`, `no later than Thursday`) when there is one.
+ */
 export interface DueMatch {
   due: string;
   start: number;
   end: number;
 }
+
+/**
+ * Connectors that introduce a deadline. Longer phrases come first so
+ * "no later than" is not split into shorter words.
+ */
+const DUE_CONNECTOR = String.raw`no\s+later\s+than|before|until|within|after|till|by|for|on|at`;
+
+/** Connector plus the space (and an optional comma) that ties it to the date. */
+const LEADING_DUE_CONNECTOR = new RegExp(String.raw`(?:${DUE_CONNECTOR})\s*[,:;]?\s+$`, 'i');
+
+const DUE_CONNECTOR_PREFIX = new RegExp(String.raw`^(?:${DUE_CONNECTOR})\s*[,:;]?\s+`, 'i');
 
 interface Hit extends DueMatch {
   relative: boolean;
@@ -143,6 +158,8 @@ export function resolveReferenceDate(value: Date | string | undefined): Date {
  * Find the first due phrase in `text`.
  * Weeks start on Monday. Relative phrases that land before the reference date
  * move forward so the deadline is not already past. An explicit year is kept.
+ * A connector immediately before the date is part of the span. Chinese markers
+ * such as 在, 于, 前, and 之前 are already included by the Chinese collectors.
  */
 export function extractDue(text: string, referenceDate: Date | string): DueMatch | null {
   const ref = resolveReferenceDate(referenceDate);
@@ -155,7 +172,41 @@ export function extractDue(text: string, referenceDate: Date | string): DueMatch
   hits.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
   const best = hits[0];
   if (!best) return null;
-  return { due: best.due, start: best.start, end: best.end };
+  return {
+    due: best.due,
+    start: includeLeadingConnector(normalized, best.start),
+    end: best.end,
+  };
+}
+
+/**
+ * Move `start` back over due connectors glued to the front of the match.
+ * "look for the report by Friday" does not move: "for" does not sit on the date.
+ */
+function includeLeadingConnector(text: string, start: number): number {
+  let cursor = start;
+  const boundary = /[\p{L}\p{N}_]/u;
+  while (cursor > 0) {
+    const before = text.slice(0, cursor);
+    const match = LEADING_DUE_CONNECTOR.exec(before);
+    if (match?.index === undefined) break;
+    const at = match.index;
+    if (at >= cursor) break;
+    if (at > 0 && boundary.test(before.charAt(at - 1))) break;
+    cursor = at;
+  }
+  return cursor;
+}
+
+/**
+ * Drop one leading due connector from a phrase already taken from a due span.
+ * Returns null when the phrase does not start with one.
+ */
+export function peelLeadingDueConnector(phrase: string): string | null {
+  const match = DUE_CONNECTOR_PREFIX.exec(phrase);
+  if (!match || match.index !== 0) return null;
+  const rest = phrase.slice(match[0].length).trim();
+  return rest || null;
 }
 
 function startOfToday(): Date {

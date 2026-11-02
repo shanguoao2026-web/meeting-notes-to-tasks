@@ -1,4 +1,4 @@
-import { extractDue, resolveReferenceDate } from './dates.js';
+import { extractDue, peelLeadingDueConnector, resolveReferenceDate } from './dates.js';
 import { stripActionMarker } from './markers.js';
 import { clampConfidence } from './score.js';
 import type { Segment } from './transcript.js';
@@ -143,7 +143,7 @@ function taskFromSentence(
 
   const due = extractDue(body, reference);
   let rest = assignment?.rest ?? body;
-  if (due) rest = removeOnce(rest, body.slice(due.start, due.end));
+  if (due) rest = removeDuePhrase(rest, body.slice(due.start, due.end));
   rest = cleanupText(rest);
   if (rest.length < 2) return null;
 
@@ -463,6 +463,23 @@ function removeOnce(haystack: string, needle: string): string {
   const at = haystack.indexOf(trimmed);
   if (at === -1) return haystack;
   return `${haystack.slice(0, at)} ${haystack.slice(at + trimmed.length)}`;
+}
+
+/**
+ * Delete the due span, including a leading connector, from the action text.
+ * Assignment patterns such as "responsible for" may already have consumed the
+ * connector; the date words are still removed.
+ */
+function removeDuePhrase(haystack: string, phrase: string): string {
+  let slice = phrase.trim();
+  while (slice) {
+    const next = removeOnce(haystack, slice);
+    if (next !== haystack) return next;
+    const peeled = peelLeadingDueConnector(slice);
+    if (!peeled || peeled === slice) return haystack;
+    slice = peeled;
+  }
+  return haystack;
 }
 
 export function cleanupText(text: string): string {

@@ -71,3 +71,38 @@ test('explicit ISO dates are not rolled into the future', () => {
   assert.equal(hit?.due, '2026-10-01');
   assert.equal('ship it by 2026-10-01 please'.slice(hit?.start, hit?.end), 'by 2026-10-01');
 });
+
+test('due spans include a leading connector and leave action prepositions', () => {
+  const cases: Array<[string, string]> = [
+    ['for next Monday', 'for next Monday'],
+    ['by Friday', 'by Friday'],
+    ['before Thursday', 'before Thursday'],
+    ['on November 7', 'on November 7'],
+    ['until Friday', 'until Friday'],
+    ['till Friday', 'till Friday'],
+    ['after Thursday', 'after Thursday'],
+    ['No later than next Monday', 'No later than next Monday'],
+    ['within 1 day', 'within 1 day'],
+    ['at end of week', 'at end of week'],
+    ['for 2026-11-07', 'for 2026-11-07'],
+    ['schedule the client demo for next Monday.', 'for next Monday'],
+    ['schedule it for, next Monday.', 'for, next Monday'],
+    ['look for the report by Friday', 'by Friday'],
+    ['therefore Friday', 'Friday'],
+    ['that Friday', 'Friday'],
+    ['soon Friday', 'Friday'],
+    ['beforehand Friday', 'Friday'],
+    ['still Friday', 'Friday'],
+    ['that end of week', 'end of week'],
+    ['在下周五前', '在下周五前'],
+    ['在下周之前', '在下周之前'],
+    ['11月7日前完成', '11月7日前完成'],
+    ['明天下午前完成', '明天下午前完成'],
+    ['下周前', '下周前'],
+  ];
+  for (const [phrase, slice] of cases) {
+    const hit = extractDue(phrase, REFERENCE);
+    assert.ok(hit, phrase);
+    assert.equal(phrase.slice(hit.start, hit.end), slice, phrase);
+  }
+});
